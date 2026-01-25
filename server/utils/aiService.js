@@ -14,7 +14,7 @@ const getEmbeddingsModel = () => {
 // Helper to get or initialize chat model
 const getChatModel = () => {
     return new ChatGoogleGenerativeAI({
-        model: "gemini-2.5-flash",
+        model: "gemini-1.5-flash",
         temperature: 0.2,
         maxOutputTokens: 2048,
     });

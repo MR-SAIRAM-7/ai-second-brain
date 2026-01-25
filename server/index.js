@@ -23,6 +23,7 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/notes', require('./routes/noteRoutes'));
 app.use('/api', require('./routes/ingestRoutes'));
 app.use('/api', require('./routes/chatRoutes'));
+app.post('/api/visualize', require('./controllers/visualizeController').visualizeNote);
 
 const PORT = process.env.PORT || 5000;
 
