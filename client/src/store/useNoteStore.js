@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import axios from 'axios';
+import api from '../api/axios'; // Use centralized api
 
 const useNoteStore = create((set, get) => ({
     notes: [],
@@ -10,10 +10,8 @@ const useNoteStore = create((set, get) => ({
     fetchNotes: async () => {
         set({ loading: true, error: null });
         try {
-            const token = localStorage.getItem('token');
-            const res = await axios.get('/api/notes', {
-                headers: { 'x-auth-token': token },
-            });
+            // Interceptor handles token
+            const res = await api.get('/notes');
             set({ notes: res.data, loading: false });
         } catch (err) {
             set({
@@ -26,14 +24,7 @@ const useNoteStore = create((set, get) => ({
     createNote: async () => {
         set({ loading: true, error: null });
         try {
-            const token = localStorage.getItem('token');
-            const res = await axios.post(
-                '/api/notes',
-                {},
-                {
-                    headers: { 'x-auth-token': token },
-                }
-            );
+            const res = await api.post('/notes', {});
             set((state) => ({
                 notes: [res.data, ...state.notes],
                 selectedNote: res.data,
@@ -49,16 +40,8 @@ const useNoteStore = create((set, get) => ({
     },
 
     updateNote: async (id, updates) => {
-        // Optimistic update could go here, but for now we'll wait for server
         try {
-            const token = localStorage.getItem('token');
-            const res = await axios.put(
-                `/api/notes/${id}`,
-                updates,
-                {
-                    headers: { 'x-auth-token': token },
-                }
-            );
+            const res = await api.put(`/notes/${id}`, updates);
 
             set((state) => ({
                 notes: state.notes.map((n) => (n._id === id ? res.data : n)),

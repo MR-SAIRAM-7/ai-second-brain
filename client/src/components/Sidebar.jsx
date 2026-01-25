@@ -1,9 +1,11 @@
 import { useEffect } from 'react';
 import useNoteStore from '../store/useNoteStore';
 import { Plus, FileText } from 'lucide-react';
+import { Link, useParams } from 'react-router-dom';
 
 const Sidebar = ({ onLogout }) => {
-    const { notes, fetchNotes, createNote, selectedNote, selectNote, loading } = useNoteStore();
+    const { notes, fetchNotes, createNote, loading } = useNoteStore();
+    const { id: selectedId } = useParams();
 
     useEffect(() => {
         fetchNotes();
@@ -25,17 +27,17 @@ const Sidebar = ({ onLogout }) => {
 
             <div className="flex-1 overflow-y-auto p-2 space-y-1">
                 {notes.map((note) => (
-                    <div
+                    <Link
                         key={note._id}
-                        onClick={() => selectNote(note)}
-                        className={`flex items-center gap-2 p-3 rounded-md cursor-pointer transition-colors ${selectedNote?._id === note._id
+                        to={`/notes/${note._id}`}
+                        className={`flex items-center gap-2 p-3 rounded-md cursor-pointer transition-colors ${selectedId === note._id
                             ? 'bg-gray-800 text-white'
                             : 'hover:bg-gray-800/50'
                             }`}
                     >
                         <FileText size={18} className="text-gray-500" />
                         <span className="truncate">{note.title}</span>
-                    </div>
+                    </Link>
                 ))}
                 {notes.length === 0 && !loading && (
                     <div className='text-center text-sm text-gray-500 mt-10'>No notes found</div>
