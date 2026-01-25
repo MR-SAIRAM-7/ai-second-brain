@@ -1,5 +1,6 @@
 const { GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI } = require("@langchain/google-genai");
-const { RecursiveCharacterTextSplitter } = require("langchain/text_splitter"); // Fixed import path compatibility
+// FIXED: Updated import path
+const { RecursiveCharacterTextSplitter } = require("@langchain/textsplitters"); 
 const { HumanMessage, SystemMessage } = require("@langchain/core/messages");
 
 // Ensure API Key exists to prevent silent crashes
@@ -27,7 +28,7 @@ const getQueryEmbeddingsModel = () => {
 // 3. Helper for Chat Model
 const getChatModel = () => {
     return new ChatGoogleGenerativeAI({
-        model: "gemini-1.5-flash", // FIXED: Changed from 2.5 (invalid) to 1.5
+        model: "gemini-1.5-flash",
         temperature: 0.2,
         maxOutputTokens: 2048,
     });
