@@ -1,33 +1,44 @@
-const { generateAnswer } = require('../utils/aiService'); // You might need to expose the raw chat model instead for JSON mode
+const { generateKnowledgeGraph } = require('../utils/aiService');
+const Note = require('../models/Note');
+const { extractPlainText } = require('../utils/textProcessing');
 
 exports.visualizeNote = async (req, res) => {
-    const { text } = req.body;
-    
-    // Prompt specifically optimized for React Flow
-    const prompt = `
-      Analyze the following text and create a concept map. 
-      Return ONLY a valid JSON object (no markdown formatting).
-      Structure:
-      {
-        "nodes": [
-          {"id": "1", "label": "Main Topic", "position": {"x": 0, "y": 0}}
-        ],
-        "edges": [
-          {"id": "e1-2", "source": "1", "target": "2", "label": "connection"}
-        ]
-      }
-      
-      Text to analyze: "${text.substring(0, 3000)}"
-    `;
+  try {
+    // Support both passing ID (preferred) or raw text
+    const { noteId, text } = req.body;
+    let textToAnalyze = text;
 
-    try {
-        // Reuse your aiService or call model directly
-        const jsonStr = await generateAnswer(prompt, ""); 
-        // Note: You might need to strip markdown code blocks ```json ... ``` if Gemini includes them
-        const cleanJson = jsonStr.replace(/```json|```/g, '').trim();
-        res.json(JSON.parse(cleanJson));
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ msg: "Visualization failed" });
+    if (noteId) {
+      const note = await Note.findById(noteId);
+      if (note) {
+        // Check auth if we fetch from DB
+        if (note.userId.toString() !== req.user.id) {
+          return res.status(403).json({ msg: 'Not authorized' });
+        }
+        textToAnalyze = extractPlainText(note.content);
+      }
     }
+
+    if (!textToAnalyze) {
+      return res.status(400).json({ msg: 'No text provided for visualization' });
+    }
+
+    const graphData = await generateKnowledgeGraph(textToAnalyze);
+
+    // Post-process to ensure React Flow compatible positions (optional, or let frontend handle layout)
+    // For now, we return valid nodes/edges. Frontend (React Flow) usually needs 'position: {x,y}'
+    // If the AI didn't generate positions, we can add defaults or let a layout library like dagre handle it on client.
+    // Let's ensure nodes have at least a default position to avoid crashes if React Flow requires it strictly.
+
+    const nodes = graphData.nodes.map((node, index) => ({
+      ...node,
+      // Simple circular layout default if missing
+      position: node.position || { x: Math.cos(index) * 200, y: Math.sin(index) * 200 }
+    }));
+
+    res.json({ nodes, edges: graphData.edges });
+  } catch (error) {
+    console.error("Visualization error:", error);
+    res.status(500).json({ msg: "Visualization failed" });
+  }
 };

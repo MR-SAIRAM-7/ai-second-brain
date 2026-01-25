@@ -33,6 +33,10 @@ exports.getNotes = async (req, res) => {
     }
 };
 
+const { reindexNoteInternal } = require('./ingestController');
+
+/* ... existing code ... */
+
 // @route   PUT api/notes/:id
 // @desc    Update a note
 // @access  Private
@@ -62,6 +66,14 @@ exports.updateNote = async (req, res) => {
         );
 
         res.json(note);
+
+        // Background re-indexing (Stale-While-Revalidate)
+        // We do not await this, so the response is fast.
+        // We catch errors locally so they don't crash the process if uncaught (though promises usually handle this safetly in modern node, explicit catch is good practice).
+        reindexNoteInternal(req.params.id, req.user.id)
+            .then(result => console.log(`[Background] Re-indexed note ${result.noteId}, chunks: ${result.chunksCreated}`))
+            .catch(err => console.error(`[Background] Re-indexing failed for note ${req.params.id}:`, err));
+
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');

@@ -90,4 +90,54 @@ const generateAnswer = async (query, context) => {
     }
 };
 
-module.exports = { generateEmbeddings, embedQuery, generateAnswer };
+/**
+ * Generates a knowledge graph JSON structure from the given text.
+ * 
+ * @param {string} text - The input text.
+ * @returns {Promise<Object>} - The JSON object with nodes and edges.
+ */
+const generateKnowledgeGraph = async (text) => {
+    try {
+        const chatModel = new ChatGoogleGenerativeAI({
+            model: "gemini-1.5-flash",
+            temperature: 0.1, // Low temperature for deterministic JSON
+            maxOutputTokens: 2048,
+            modelKwargs: { "response_format": { "type": "json_object" } } // Force JSON mode if supported or rely on prompt
+        });
+
+        const prompt = `
+        Analyze the following text and extract key concepts and their relationships.
+        Output purely valid JSON with the following structure:
+        {
+            "nodes": [
+                { "id": "1", "label": "Concept Name" }
+            ],
+            "edges": [
+                { "source": "1", "target": "2", "label": "relationship description" }
+            ]
+        }
+        
+        Ensure node IDs are unique strings.
+        Limit to the most important top 10-15 concepts to keep the graph readable.
+        
+        Text to analyze:
+        "${text}"
+        `;
+
+        const messages = [
+            new SystemMessage("You are a specialized AI that extracts knowledge graphs from text. You ONLY output valid JSON."),
+            new HumanMessage(prompt)
+        ];
+
+        const response = await chatModel.invoke(messages);
+
+        // Sanitize output in case of markdown blocks
+        let cleanJson = response.content.replace(/```json|```/g, '').trim();
+        return JSON.parse(cleanJson);
+    } catch (error) {
+        console.error("Error generating knowledge graph:", error);
+        throw error;
+    }
+};
+
+module.exports = { generateEmbeddings, embedQuery, generateAnswer, generateKnowledgeGraph };
