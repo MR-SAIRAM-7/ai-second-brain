@@ -1,0 +1,86 @@
+﻿
+> client@0.0.0 build
+> vite build
+
+[36mvite v7.3.1 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32mΓ£ô[39m 2277 modules transformed.
+node.exe : [31mΓ£ù[39m Build 
+failed in 15.19s
+At line:1 char:1
++ & "D:\Program Files/node.exe" 
+"D:\Program 
+Files/node_modules/npm/bin/ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSp 
+   ecified: ([31mΓ£ù[39m Build f  
+  ailed in 15.19s:String) [], Rem   
+ oteException
+    + FullyQualifiedErrorId : Nativ 
+   eCommandError
+ 
+[31merror during build:
+[31msrc/components/Editor.jsx 
+(4:9): "BlockNoteView" is not 
+exported by "node_modules/@blocknote
+/react/dist/blocknote-react.js", 
+imported by 
+"src/components/Editor.jsx".[31m
+file: [36mD:/project-k/ai-second-br
+ain/client/src/components/Editor.jsx
+:4:9[31m
+[33m
+2: import 
+"@blocknote/core/fonts/inter.css";
+3: import { useCreateBlockNote } 
+from "@blocknote/react";
+4: import { BlockNoteView } from 
+"@blocknote/react";
+            ^
+5: import 
+"@blocknote/react/style.css";
+6: import useNoteStore from 
+"../store/useNoteStore";
+[31m
+    at getRollupError (file:///D:/pr
+oject-k/ai-second-brain/client/node_
+modules/rollup/dist/es/shared/parseA
+st.js:400:41)
+    at error (file:///D:/project-k/a
+i-second-brain/client/node_modules/r
+ollup/dist/es/shared/parseAst.js:396
+:42)
+    at Module.error (file:///D:/proj
+ect-k/ai-second-brain/client/node_mo
+dules/rollup/dist/es/shared/node-ent
+ry.js:17036:16)
+    at Module.traceVariable (file://
+/D:/project-k/ai-second-brain/client
+/node_modules/rollup/dist/es/shared/
+node-entry.js:17448:29)
+    at ModuleScope.findVariable (fil
+e:///D:/project-k/ai-second-brain/cl
+ient/node_modules/rollup/dist/es/sha
+red/node-entry.js:15066:39)
+    at FunctionScope.findVariable (f
+ile:///D:/project-k/ai-second-brain/
+client/node_modules/rollup/dist/es/s
+hared/node-entry.js:5673:38)
+    at 
+FunctionBodyScope.findVariable (file
+:///D:/project-k/ai-second-brain/cli
+ent/node_modules/rollup/dist/es/shar
+ed/node-entry.js:5673:38)
+    at Identifier.bind (file:///D:/p
+roject-k/ai-second-brain/client/node
+_modules/rollup/dist/es/shared/node-
+entry.js:5447:40)
+    at CallExpression.bind (file:///
+D:/project-k/ai-second-brain/client/
+node_modules/rollup/dist/es/shared/n
+ode-entry.js:2825:28)
+    at CallExpression.bind (file:///
+D:/project-k/ai-second-brain/client/
+node_modules/rollup/dist/es/shared/n
+ode-entry.js:12179:15)[39m
