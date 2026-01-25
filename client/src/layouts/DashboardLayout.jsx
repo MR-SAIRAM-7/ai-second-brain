@@ -1,8 +1,22 @@
+import { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import ChatSidebar from '../components/ChatSidebar';
+import useNoteStore from '../store/useNoteStore';
+import { useToast } from '../context/ToastContext';
 
 const DashboardLayout = ({ onLogout }) => {
+    const error = useNoteStore((state) => state.error);
+    const clearError = useNoteStore((state) => state.clearError);
+    const { addToast } = useToast();
+
+    useEffect(() => {
+        if (error) {
+            addToast(error, 'error');
+            clearError();
+        }
+    }, [error, addToast, clearError]);
+
     return (
         <div className="flex h-screen bg-black text-white">
             <Sidebar onLogout={onLogout} />

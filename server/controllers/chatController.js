@@ -32,7 +32,6 @@ const searchChunks = async (userId, queryVector) => {
 
 exports.chat = async (req, res) => {
     try {
-        // Handle case where userId might come from Auth middleware OR body
         const { query, userId: bodyUserId } = req.body || {};
         const authedUserId = req.user?.id;
         const effectiveUserId = authedUserId || bodyUserId;
@@ -51,7 +50,7 @@ exports.chat = async (req, res) => {
         const queryVector = await embedQuery(query);
 
         // 2. Search for relevant chunks
-        // NOTE: Ensure your Atlas Vector Index is created and has 768 dimensions!
+        // NOTE: If this line fails, it means your MongoDB Atlas Index 'vector_index' is missing or misconfigured.
         const results = await searchChunks(effectiveUserId, queryVector);
         console.log(`[Chat] Found ${results.length} relevant chunks`);
 
@@ -61,10 +60,9 @@ exports.chat = async (req, res) => {
             .filter(Boolean)
             .join('\n---\n');
 
-        // Fallback if no context found
         if (!context) {
-            return res.json({ 
-                answer: "I couldn't find any notes related to your query.", 
+             return res.json({ 
+                answer: "I couldn't find any information in your notes about that.", 
                 sources: [] 
             });
         }
@@ -84,9 +82,9 @@ exports.chat = async (req, res) => {
     } catch (error) {
         console.error('[Chat Controller Error]:', error);
         
-        // Return 500 but log the specific error on server
+        // Provide details in response for debugging (remove error.message in production)
         return res.status(500).json({ 
-            msg: 'Failed to generate answer. Check server logs.', 
+            msg: 'Failed to generate answer', 
             error: error.message 
         });
     }

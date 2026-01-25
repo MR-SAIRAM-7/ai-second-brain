@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import api from '../api/axios'; // Centralized api
+import { useToast } from '../context/ToastContext';
 
 const Login = ({ onLogin }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isRegistering, setIsRegistering] = useState(false);
+    const { addToast } = useToast();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -17,13 +19,14 @@ const Login = ({ onLogin }) => {
             const res = await api.post(endpoint, payload);
 
             if (isRegistering) {
-                alert('Registered! Now login.');
+                addToast('Registered! Now login.', 'success');
                 setIsRegistering(false);
             } else {
                 onLogin(res.data.token);
+                addToast('Logged in successfully', 'success');
             }
         } catch (err) {
-            alert((isRegistering ? 'Registration' : 'Login') + ' failed: ' + (err.response?.data?.msg || err.message));
+            addToast((isRegistering ? 'Registration' : 'Login') + ' failed: ' + (err.response?.data?.msg || err.message), 'error');
         }
     };
 

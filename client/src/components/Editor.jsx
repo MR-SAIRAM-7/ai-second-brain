@@ -28,19 +28,11 @@ export default function Editor({ note }) {
         const handleChange = () => {
             clearTimeout(timeoutId);
             timeoutId = setTimeout(() => {
-                updateNote(note._id, { content: editor.document });
+                if (editor.document) {
+                    updateNote(note._id, { content: editor.document });
+                }
             }, 2000); // 2 second debounce
         };
-
-        // Subscribe to editor changes
-        // BlockNote exposes check on every change via onChange in the view or listener
-        // But better to attach listener to the editor instance directly if possible, or pass onChange to BlockNoteView
-
-        // Actually, useCreateBlockNote returns an editor instance. 
-        // We can't directly subscribe with a simple hook in v0.15+ the way useBlockNote used to work.
-        // But we can pass `onChange` to BlockNoteView OR use `editor.onEditorContentChange`?
-        // Let's check documentation pattern. 
-        // Official way: editor.onChange(() => ...)
 
         const unsubscribe = editor.onChange(handleChange);
 

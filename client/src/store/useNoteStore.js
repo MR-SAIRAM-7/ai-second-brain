@@ -52,12 +52,15 @@ const useNoteStore = create((set, get) => ({
             set({
                 error: err.response?.data?.msg || 'Failed to update note',
             });
+            console.error("Full update error:", err.response); // Debug log
         }
     },
 
     selectNote: (note) => {
         set({ selectedNote: note });
     },
+
+    clearError: () => set({ error: null }),
 }));
 
 export default useNoteStore;

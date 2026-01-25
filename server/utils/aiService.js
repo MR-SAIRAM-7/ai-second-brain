@@ -1,23 +1,21 @@
 const { GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI } = require("@langchain/google-genai");
-// FIXED: Updated import path
-const { RecursiveCharacterTextSplitter } = require("@langchain/textsplitters"); 
+const { RecursiveCharacterTextSplitter } = require("@langchain/textsplitters");
 const { HumanMessage, SystemMessage } = require("@langchain/core/messages");
 
-// Ensure API Key exists to prevent silent crashes
+// 0. Safety Check
 if (!process.env.GOOGLE_API_KEY) {
-    console.error("CRITICAL ERROR: GOOGLE_API_KEY is missing in .env file.");
+    console.error("CRITICAL: GOOGLE_API_KEY is missing in process.env");
 }
 
-// 1. Helper for Document Embeddings (Used during Ingestion)
+// 1. Helper for Document Embeddings (Used when saving/ingesting notes)
 const getDocumentEmbeddingsModel = () => {
     return new GoogleGenerativeAIEmbeddings({
         model: "text-embedding-004",
         taskType: "RETRIEVAL_DOCUMENT",
-        title: "KMS Note"
     });
 };
 
-// 2. Helper for Query Embeddings (Used during Chat)
+// 2. Helper for Query Embeddings (Used when chatting/searching)
 const getQueryEmbeddingsModel = () => {
     return new GoogleGenerativeAIEmbeddings({
         model: "text-embedding-004",
@@ -28,7 +26,7 @@ const getQueryEmbeddingsModel = () => {
 // 3. Helper for Chat Model
 const getChatModel = () => {
     return new ChatGoogleGenerativeAI({
-        model: "gemini-1.5-flash",
+        model: "gemini-flash-latest", // Use latest flash alias which validates against available models
         temperature: 0.2,
         maxOutputTokens: 2048,
     });
@@ -45,7 +43,7 @@ const generateEmbeddings = async (text) => {
         });
 
         const docs = await splitter.createDocuments([text]);
-        
+
         // Use Document model for ingestion
         const embeddingsModel = getDocumentEmbeddingsModel();
         const vectors = await embeddingsModel.embedDocuments(docs.map(doc => doc.pageContent));
