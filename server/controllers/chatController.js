@@ -10,7 +10,7 @@ const searchChunks = async (userId, queryVector) => {
             $vectorSearch: {
                 index: 'vector_index',
                 path: 'embedding',
-                queryVector,
+                queryVector: queryVector,
                 filter: { 'metadata.userId': userObjectId },
                 limit: 5,
                 numCandidates: 100,
@@ -36,23 +36,23 @@ exports.chat = async (req, res) => {
         const authedUserId = req.user?.id;
         const effectiveUserId = authedUserId || bodyUserId;
 
-        if (!query || !effectiveUserId) {
-            return res.status(400).json({ msg: 'query and userId are required' });
-        }
-
-        if (bodyUserId && authedUserId && bodyUserId !== authedUserId) {
-            return res.status(403).json({ msg: 'User mismatch' });
+        if (!query) {
+            return res.status(400).json({ msg: 'Query is required' });
         }
 
         if (!mongoose.Types.ObjectId.isValid(effectiveUserId)) {
             return res.status(400).json({ msg: 'Invalid userId' });
         }
 
-        // 1. Embed the query using Gemini
+        console.log(`[Chat] Processing query for user: ${effectiveUserId}`);
+
+        // 1. Embed the query
         const queryVector = await embedQuery(query);
 
         // 2. Search for relevant chunks
+        // NOTE: If this fails, ensure your Atlas Index "vector_index" exists and has 768 dimensions!
         const results = await searchChunks(effectiveUserId, queryVector);
+        console.log(`[Chat] Found ${results.length} relevant chunks`);
 
         // 3. Build context
         const context = results
@@ -60,8 +60,15 @@ exports.chat = async (req, res) => {
             .filter(Boolean)
             .join('\n---\n');
 
-        // 4. Generate answer using Gemini
-        const answer = await generateAnswer(query, context || '');
+        if (!context) {
+            return res.json({ 
+                answer: "I couldn't find any relevant notes to answer your question.", 
+                sources: [] 
+            });
+        }
+
+        // 4. Generate answer
+        const answer = await generateAnswer(query, context);
 
         const sources = results.map((r) => ({
             noteId: r.noteId,
@@ -71,8 +78,14 @@ exports.chat = async (req, res) => {
         }));
 
         return res.json({ answer, sources });
+
     } catch (error) {
-        console.error('Error handling chat:', error);
-        return res.status(500).json({ msg: 'Failed to generate answer' });
+        console.error('[Chat Controller Error]:', error);
+        
+        // Return a more specific error if possible, but keep 500 for generic crashes
+        return res.status(500).json({ 
+            msg: 'Failed to generate answer. Check server logs for details.', 
+            error: error.message 
+        });
     }
 };

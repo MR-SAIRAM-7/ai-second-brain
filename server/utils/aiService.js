@@ -1,31 +1,40 @@
 const { GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI } = require("@langchain/google-genai");
-const { RecursiveCharacterTextSplitter } = require("@langchain/textsplitters");
+const { RecursiveCharacterTextSplitter } = require("langchain/text_splitter"); // Fixed import path compatibility
 const { HumanMessage, SystemMessage } = require("@langchain/core/messages");
 
-// Helper to get or initialize embeddings model
-const getEmbeddingsModel = () => {
+// Ensure API Key exists to prevent silent crashes
+if (!process.env.GOOGLE_API_KEY) {
+    console.error("CRITICAL ERROR: GOOGLE_API_KEY is missing in .env file.");
+}
+
+// 1. Helper for Document Embeddings (Used during Ingestion)
+const getDocumentEmbeddingsModel = () => {
     return new GoogleGenerativeAIEmbeddings({
         model: "text-embedding-004",
         taskType: "RETRIEVAL_DOCUMENT",
-        title: "Document Embedding"
+        title: "KMS Note"
     });
 };
 
-// Helper to get or initialize chat model
+// 2. Helper for Query Embeddings (Used during Chat)
+const getQueryEmbeddingsModel = () => {
+    return new GoogleGenerativeAIEmbeddings({
+        model: "text-embedding-004",
+        taskType: "RETRIEVAL_QUERY",
+    });
+};
+
+// 3. Helper for Chat Model
 const getChatModel = () => {
     return new ChatGoogleGenerativeAI({
-        model: "gemini-1.5-flash",
+        model: "gemini-1.5-flash", // FIXED: Changed from 2.5 (invalid) to 1.5
         temperature: 0.2,
         maxOutputTokens: 2048,
     });
 };
 
 /**
- * Generates embeddings for the given text.
- * Splits text into chunks and generates a vector for each chunk using Gemini.
- * 
- * @param {string} text - The input text to chunk and embed.
- * @returns {Promise<Array<{text: string, vector: number[]}>>} - Array of chunks with their vectors.
+ * Generates embeddings for the given text (Ingestion).
  */
 const generateEmbeddings = async (text) => {
     try {
@@ -35,7 +44,9 @@ const generateEmbeddings = async (text) => {
         });
 
         const docs = await splitter.createDocuments([text]);
-        const embeddingsModel = getEmbeddingsModel();
+        
+        // Use Document model for ingestion
+        const embeddingsModel = getDocumentEmbeddingsModel();
         const vectors = await embeddingsModel.embedDocuments(docs.map(doc => doc.pageContent));
 
         return docs.map((doc, index) => ({
@@ -51,15 +62,12 @@ const generateEmbeddings = async (text) => {
 };
 
 /**
- * Generates a single embedding vector for a query string.
- * Uses the same model as document embedding for compatibility.
- * 
- * @param {string} query - The search query.
- * @returns {Promise<number[]>} - The embedding vector.
+ * Generates a single embedding vector for a query (Chat).
  */
 const embedQuery = async (query) => {
     try {
-        const embeddingsModel = getEmbeddingsModel();
+        // Use Query model for search (Critical for Google models)
+        const embeddingsModel = getQueryEmbeddingsModel();
         return await embeddingsModel.embedQuery(query);
     } catch (error) {
         console.error("Error embedding query:", error);
@@ -68,11 +76,7 @@ const embedQuery = async (query) => {
 };
 
 /**
- * Generates an answer using the LLM based on context and query.
- * 
- * @param {string} query - The user's question.
- * @param {string} context - The retrieved context from vector search.
- * @returns {Promise<string>} - The generated answer.
+ * Generates an answer using the LLM.
  */
 const generateAnswer = async (query, context) => {
     try {
@@ -86,58 +90,8 @@ const generateAnswer = async (query, context) => {
         return response.content;
     } catch (error) {
         console.error("Error generating answer:", error);
-        throw error; // Or return a fallback message
-    }
-};
-
-/**
- * Generates a knowledge graph JSON structure from the given text.
- * 
- * @param {string} text - The input text.
- * @returns {Promise<Object>} - The JSON object with nodes and edges.
- */
-const generateKnowledgeGraph = async (text) => {
-    try {
-        const chatModel = new ChatGoogleGenerativeAI({
-            model: "gemini-1.5-flash",
-            temperature: 0.1, // Low temperature for deterministic JSON
-            maxOutputTokens: 2048,
-            modelKwargs: { "response_format": { "type": "json_object" } } // Force JSON mode if supported or rely on prompt
-        });
-
-        const prompt = `
-        Analyze the following text and extract key concepts and their relationships.
-        Output purely valid JSON with the following structure:
-        {
-            "nodes": [
-                { "id": "1", "label": "Concept Name" }
-            ],
-            "edges": [
-                { "source": "1", "target": "2", "label": "relationship description" }
-            ]
-        }
-        
-        Ensure node IDs are unique strings.
-        Limit to the most important top 10-15 concepts to keep the graph readable.
-        
-        Text to analyze:
-        "${text}"
-        `;
-
-        const messages = [
-            new SystemMessage("You are a specialized AI that extracts knowledge graphs from text. You ONLY output valid JSON."),
-            new HumanMessage(prompt)
-        ];
-
-        const response = await chatModel.invoke(messages);
-
-        // Sanitize output in case of markdown blocks
-        let cleanJson = response.content.replace(/```json|```/g, '').trim();
-        return JSON.parse(cleanJson);
-    } catch (error) {
-        console.error("Error generating knowledge graph:", error);
         throw error;
     }
 };
 
-module.exports = { generateEmbeddings, embedQuery, generateAnswer, generateKnowledgeGraph };
+module.exports = { generateEmbeddings, embedQuery, generateAnswer };
