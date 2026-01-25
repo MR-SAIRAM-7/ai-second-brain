@@ -32,6 +32,7 @@ const searchChunks = async (userId, queryVector) => {
 
 exports.chat = async (req, res) => {
     try {
+        // Handle case where userId might come from Auth middleware OR body
         const { query, userId: bodyUserId } = req.body || {};
         const authedUserId = req.user?.id;
         const effectiveUserId = authedUserId || bodyUserId;
@@ -40,8 +41,8 @@ exports.chat = async (req, res) => {
             return res.status(400).json({ msg: 'Query is required' });
         }
 
-        if (!mongoose.Types.ObjectId.isValid(effectiveUserId)) {
-            return res.status(400).json({ msg: 'Invalid userId' });
+        if (!effectiveUserId || !mongoose.Types.ObjectId.isValid(effectiveUserId)) {
+            return res.status(400).json({ msg: 'Invalid or missing userId' });
         }
 
         console.log(`[Chat] Processing query for user: ${effectiveUserId}`);
@@ -50,7 +51,7 @@ exports.chat = async (req, res) => {
         const queryVector = await embedQuery(query);
 
         // 2. Search for relevant chunks
-        // NOTE: If this fails, ensure your Atlas Index "vector_index" exists and has 768 dimensions!
+        // NOTE: Ensure your Atlas Vector Index is created and has 768 dimensions!
         const results = await searchChunks(effectiveUserId, queryVector);
         console.log(`[Chat] Found ${results.length} relevant chunks`);
 
@@ -60,9 +61,10 @@ exports.chat = async (req, res) => {
             .filter(Boolean)
             .join('\n---\n');
 
+        // Fallback if no context found
         if (!context) {
             return res.json({ 
-                answer: "I couldn't find any relevant notes to answer your question.", 
+                answer: "I couldn't find any notes related to your query.", 
                 sources: [] 
             });
         }
@@ -82,9 +84,9 @@ exports.chat = async (req, res) => {
     } catch (error) {
         console.error('[Chat Controller Error]:', error);
         
-        // Return a more specific error if possible, but keep 500 for generic crashes
+        // Return 500 but log the specific error on server
         return res.status(500).json({ 
-            msg: 'Failed to generate answer. Check server logs for details.', 
+            msg: 'Failed to generate answer. Check server logs.', 
             error: error.message 
         });
     }
