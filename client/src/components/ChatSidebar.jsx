@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
-import { MessageCircle, X, Send, Loader2, Bot, User } from 'lucide-react';
+import { MessageCircle, X, Send, Bot, User } from 'lucide-react';
 import useUIStore from '../store/useUIStore';
 import api from '../api/axios';
 
@@ -112,13 +112,14 @@ const ChatSidebar = () => {
                     </div>
                 ))}
 
+                {/* Skeleton Loader */}
                 {loading && (
-                    <div className="flex gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0">
-                            <Bot size={16} className="text-blue-400" />
-                        </div>
-                        <div className="bg-gray-800 p-3 rounded-lg rounded-tl-none text-gray-400">
-                            <Loader2 size={18} className="animate-spin" />
+                    <div className="flex gap-3 animate-pulse">
+                        <div className="w-8 h-8 rounded-full bg-gray-700 flex-shrink-0" />
+                        <div className="space-y-2 w-3/4">
+                            <div className="h-4 bg-gray-700 rounded w-full"></div>
+                            <div className="h-4 bg-gray-700 rounded w-5/6"></div>
+                            <div className="h-4 bg-gray-700 rounded w-4/6"></div>
                         </div>
                     </div>
                 )}
@@ -132,8 +133,9 @@ const ChatSidebar = () => {
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder="Type a message..."
-                        className="w-full bg-gray-800 text-white rounded-full py-3 pl-4 pr-12 focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all text-sm placeholder-gray-500"
+                        disabled={loading}
+                        placeholder={loading ? "Generating response..." : "Type a message..."}
+                        className="w-full bg-gray-800 text-white rounded-full py-3 pl-4 pr-12 focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all text-sm placeholder-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                     <button
                         type="submit"

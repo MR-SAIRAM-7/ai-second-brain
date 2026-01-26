@@ -38,7 +38,8 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/notes', require('./routes/noteRoutes'));
 app.use('/api', require('./routes/ingestRoutes'));
 app.use('/api', limiter, require('./routes/chatRoutes')); // Apply limiter to chat
-app.post('/api/visualize', require('./controllers/visualizeController').visualizeNote);
+const auth = require('./middleware/auth');
+app.post('/api/visualize', auth, require('./controllers/visualizeController').visualizeNote);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

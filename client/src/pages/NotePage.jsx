@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import Editor from '../components/Editor';
+import MindMap from '../components/MindMap';
 import useNoteStore from '../store/useNoteStore';
 
 const NotePage = () => {
@@ -25,7 +26,16 @@ const NotePage = () => {
         return <div className="text-gray-500">Loading note or note not found...</div>;
     }
 
-    return <Editor key={note._id} note={note} />;
+    return (
+        <div className="flex h-full w-full gap-4 p-4">
+            <div className="flex-1 overflow-hidden rounded-lg bg-gray-900 border border-gray-800">
+                <Editor key={note._id} note={note} />
+            </div>
+            <div className="flex-1 overflow-hidden rounded-lg bg-gray-900 border border-gray-800 shadow-xl">
+                <MindMap noteId={note._id} />
+            </div>
+        </div>
+    );
 };
 
 export default NotePage;

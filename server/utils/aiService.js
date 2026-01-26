@@ -93,4 +93,53 @@ const generateAnswer = async (query, context) => {
     }
 };
 
-module.exports = { generateEmbeddings, embedQuery, generateAnswer };
+/**
+ * Generates a knowledge graph from text.
+ */
+const generateKnowledgeGraph = async (text) => {
+    try {
+        // Create a specific model instance for JSON mode
+        const jsonModel = new ChatGoogleGenerativeAI({
+            model: "gemini-flash-latest",
+            temperature: 0.2,
+            maxOutputTokens: 2048,
+            modelKwargs: {
+                response_mime_type: "application/json"
+            }
+        });
+
+        const systemPrompt = "You are a knowledge graph generator. Extract main concepts as nodes and relationships as edges.";
+        // JSON mode prompt engineering
+        const userPrompt = `Analyze this text: ${text}. 
+        Output STRICT JSON matching this schema:
+        {
+          "nodes": [
+            { "id": "string", "label": "string" }
+          ],
+          "edges": [
+            { "source": "string", "target": "string", "label": "string" }
+          ]
+        }`;
+
+        const messages = [
+            new SystemMessage(systemPrompt),
+            new HumanMessage(userPrompt)
+        ];
+
+        const response = await jsonModel.invoke(messages);
+
+        // Parse the JSON content
+        try {
+            return JSON.parse(response.content);
+        } catch (e) {
+            console.error("Failed to parse JSON from AI response:", response.content);
+            throw new Error("Invalid JSON format from AI");
+        }
+
+    } catch (error) {
+        console.error("Error generating knowledge graph:", error);
+        throw error;
+    }
+};
+
+module.exports = { generateEmbeddings, embedQuery, generateAnswer, generateKnowledgeGraph };

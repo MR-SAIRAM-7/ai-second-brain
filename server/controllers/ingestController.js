@@ -1,4 +1,5 @@
-const pdfParse = require('pdf-parse');
+const pdfParseLib = require('pdf-parse');
+const pdfParse = pdfParseLib.default || pdfParseLib;
 const Note = require('../models/Note');
 const Chunk = require('../models/Chunk');
 const { generateEmbeddings } = require('../utils/aiService');
@@ -108,9 +109,18 @@ exports.uploadPdf = async (req, res) => {
         if (!req.file) {
             return res.status(400).json({ msg: 'PDF file is required' });
         }
+        console.log(`[Upload] Received file: ${req.file.originalname}, size: ${req.file.size}`);
 
-        const parsed = await pdfParse(req.file.buffer);
+        let parsed;
+        try {
+            parsed = await pdfParse(req.file.buffer);
+        } catch (e) {
+            console.error('[Upload] PDF Parse failed:', e);
+            return res.status(400).json({ msg: 'Failed to parse PDF content', error: e.message });
+        }
+
         const rawText = normalizeWhitespace(parsed?.text || '');
+        console.log(`[Upload] Extract text length: ${rawText.length}`);
 
         if (!rawText) {
             return res.status(400).json({ msg: 'Unable to extract text from PDF' });
@@ -127,10 +137,21 @@ exports.uploadPdf = async (req, res) => {
             type: 'pdf',
         });
 
-        const embeddings = await generateEmbeddings(rawText);
+        console.log(`[Upload] Note created: ${note._id}`);
+
+        let embeddings;
+        try {
+            embeddings = await generateEmbeddings(rawText);
+        } catch (e) {
+            console.error('[Upload] Embedding generation failed:', e);
+            // Cleanup note if embeddings fail
+            await Note.findByIdAndDelete(note._id);
+            return res.status(500).json({ msg: 'AI Embedding generation failed', error: e.message });
+        }
 
         if (!embeddings?.length) {
-            return res.status(500).json({ msg: 'Embedding generation failed' });
+            await Note.findByIdAndDelete(note._id);
+            return res.status(500).json({ msg: 'Embedding generation returned no results' });
         }
 
         const docs = buildChunkDocs(note._id, req.user.id, embeddings);
@@ -141,6 +162,6 @@ exports.uploadPdf = async (req, res) => {
         return res.status(201).json({ note, chunksCreated: docs.length });
     } catch (error) {
         console.error('Error ingesting PDF:', error);
-        return res.status(500).json({ msg: 'Failed to ingest PDF' });
+        return res.status(500).json({ msg: 'Failed to ingest PDF', error: error.message });
     }
 };
