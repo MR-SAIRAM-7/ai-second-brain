@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import ChatSidebar from '../components/ChatSidebar';
 import useNoteStore from '../store/useNoteStore';
-import { useToast } from '../context/ToastContext';
+import { useToast } from '../hooks/useToast';
 
 const DashboardLayout = ({ onLogout }) => {
     const error = useNoteStore((state) => state.error);

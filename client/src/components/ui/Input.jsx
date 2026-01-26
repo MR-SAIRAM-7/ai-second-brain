@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import { cn } from "./Button"; // Re-use cn utility
+import { cn } from "../../utils/cn";
 
 const Input = forwardRef(({ className, ...props }, ref) => {
     return (

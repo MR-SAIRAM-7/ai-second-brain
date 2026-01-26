@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import api from '../api/axios'; // Centralized api
-import { useToast } from '../context/ToastContext';
+import { useToast } from '../hooks/useToast';
 
 const Login = ({ onLogin }) => {
     const [email, setEmail] = useState('');

@@ -13,4 +13,24 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    // Optimize chunk splitting
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Separate vendor chunks for better caching
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'editor-vendor': ['@blocknote/core', '@blocknote/react', '@blocknote/mantine'],
+          'graph-vendor': ['reactflow', 'dagre'],
+          'ui-vendor': ['zustand', 'axios', 'lucide-react'],
+        },
+      },
+    },
+    // Increase chunk size warning limit
+    chunkSizeWarningLimit: 1000,
+    // Enable source maps for production debugging
+    sourcemap: false,
+    // Use default esbuild minifier (faster and no extra dependency)
+    minify: 'esbuild',
+  },
 })

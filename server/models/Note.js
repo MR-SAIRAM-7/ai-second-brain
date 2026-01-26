@@ -4,11 +4,13 @@ const NoteSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true
+        required: true,
+        index: true
     },
     title: {
         type: String,
-        required: true
+        required: true,
+        default: 'Untitled'
     },
     content: {
         type: mongoose.Schema.Types.Mixed,
@@ -22,5 +24,8 @@ const NoteSchema = new mongoose.Schema({
 }, {
     timestamps: true
 });
+
+// Compound index for efficient user queries
+NoteSchema.index({ userId: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Note', NoteSchema);

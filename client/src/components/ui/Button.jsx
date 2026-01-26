@@ -1,10 +1,5 @@
 import { forwardRef } from "react";
-import { clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
-
-function cn(...inputs) {
-    return twMerge(clsx(inputs));
-}
+import { cn } from "../../utils/cn";
 
 const Button = forwardRef(({ className, variant = "default", size = "default", ...props }, ref) => {
     const variants = {
@@ -39,4 +34,4 @@ const Button = forwardRef(({ className, variant = "default", size = "default", .
 
 Button.displayName = "Button";
 
-export { Button, cn };
+export { Button };
