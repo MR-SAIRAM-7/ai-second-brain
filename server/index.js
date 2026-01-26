@@ -66,6 +66,15 @@ const authLimiter = rateLimit({
     legacyHeaders: false,
 });
 
+// Rate Limiter for API routes (notes, upload, etc)
+const apiLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    limit: 100, // Limit each IP to 100 requests per window
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { msg: 'Too many requests, please try again later' }
+});
+
 // Rate Limiter for Chat routes
 const chatLimiter = rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minute
@@ -77,8 +86,8 @@ const chatLimiter = rateLimit({
 
 // Define Routes
 app.use('/api/auth', authLimiter, require('./routes/authRoutes'));
-app.use('/api/notes', require('./routes/noteRoutes'));
-app.use('/api', require('./routes/ingestRoutes'));
+app.use('/api/notes', apiLimiter, require('./routes/noteRoutes'));
+app.use('/api', apiLimiter, require('./routes/ingestRoutes'));
 app.use('/api', chatLimiter, require('./routes/chatRoutes'));
 
 const auth = require('./middleware/auth');

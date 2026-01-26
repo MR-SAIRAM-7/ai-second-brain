@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const logger = require('../utils/logger');
 
 exports.register = async (req, res, next) => {
     try {
@@ -26,10 +27,10 @@ exports.register = async (req, res, next) => {
 
         await user.save();
 
-        console.log(`New user registered: ${email}`);
+        logger.success('New user registered', { email, userId: user.id });
         res.status(201).json({ msg: 'User registered successfully' });
     } catch (err) {
-        console.error('Registration error:', err);
+        logger.error('Registration failed', err, { email: req.body.email });
         
         // Handle duplicate key error
         if (err.code === 11000) {
@@ -56,7 +57,7 @@ exports.login = async (req, res, next) => {
             return res.status(400).json({ msg: 'Invalid credentials' });
         }
 
-        // Return JWT with longer expiration
+        // Return JWT with configurable settings
         const payload = {
             user: {
                 id: user.id
@@ -68,12 +69,12 @@ exports.login = async (req, res, next) => {
             process.env.JWT_SECRET,
             { 
                 expiresIn: process.env.JWT_EXPIRATION || '7d',
-                issuer: 'ai-second-brain',
-                audience: 'ai-second-brain-users'
+                issuer: process.env.JWT_ISSUER || 'ai-second-brain',
+                audience: process.env.JWT_AUDIENCE || 'ai-second-brain-users'
             }
         );
 
-        console.log(`User logged in: ${email}`);
+        logger.success('User logged in', { email, userId: user.id });
         
         res.json({ 
             token, 
@@ -84,7 +85,7 @@ exports.login = async (req, res, next) => {
             } 
         });
     } catch (err) {
-        console.error('Login error:', err);
+        logger.error('Login failed', err, { email: req.body.email });
         next(err);
     }
 };
