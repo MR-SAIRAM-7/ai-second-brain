@@ -81,11 +81,23 @@ exports.chat = async (req, res) => {
 
     } catch (error) {
         console.error('[Chat Controller Error]:', error);
-        
+
+        const isQuota = error?.code === 'AI_QUOTA' || error?.status === 429;
+        const status = isQuota ? 429 : 500;
+        const payload = {
+            msg: isQuota
+                ? 'AI quota exceeded. Please retry in a minute.'
+                : 'Failed to generate answer'
+        };
+
+        if (isQuota && error.retryAfterSeconds) {
+            payload.retryAfterSeconds = error.retryAfterSeconds;
+        }
+
         // Provide details in response for debugging (remove error.message in production)
-        return res.status(500).json({ 
-            msg: 'Failed to generate answer', 
-            error: error.message 
+        return res.status(status).json({ 
+            ...payload,
+            ...(process.env.NODE_ENV !== 'production' && { error: error.message })
         });
     }
 };

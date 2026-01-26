@@ -20,7 +20,6 @@ const UserSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Indexes for better query performance
-UserSchema.index({ email: 1 });
+// Note: unique on email already creates an index; no extra index needed to avoid duplicates
 
 module.exports = mongoose.model('User', UserSchema);

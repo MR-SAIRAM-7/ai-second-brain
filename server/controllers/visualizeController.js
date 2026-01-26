@@ -9,6 +9,7 @@ exports.visualizeNote = async (req, res) => {
     // Support both passing ID (preferred) or raw text
     const { noteId, text } = req.body;
     let textToAnalyze = text;
+    let noteDoc = null;
 
     if (noteId) {
       // Validate noteId format
@@ -21,6 +22,8 @@ exports.visualizeNote = async (req, res) => {
         return res.status(404).json({ msg: 'Note not found' });
       }
 
+      noteDoc = note;
+
       // Check authorization
       if (note.userId.toString() !== req.user.id) {
         return res.status(403).json({ msg: 'Not authorized to access this note' });
@@ -29,21 +32,43 @@ exports.visualizeNote = async (req, res) => {
       textToAnalyze = extractPlainText(note.content);
     }
 
-    if (!textToAnalyze || textToAnalyze.trim().length === 0) {
-      return res.status(400).json({ msg: 'No text provided for visualization' });
+    // Require at least a source (noteId or text). If provided but empty, we'll fallback to a minimal graph.
+    const hasSource = Boolean(noteId) || (typeof text === 'string' && text.trim().length > 0);
+    if (!hasSource) {
+      return res.status(400).json({ msg: 'Provide a noteId or non-empty text to visualize' });
     }
 
-    // Check text length
-    if (textToAnalyze.length < 20) {
-      return res.status(400).json({ msg: 'Text is too short for meaningful visualization (minimum 20 characters)' });
-    }
+    const minTextLength = 20;
+    const normalizedText = (textToAnalyze || '').trim();
+    const tooShort = normalizedText.length > 0 && normalizedText.length < minTextLength;
 
     logger.info('Generating knowledge graph', { 
       userId: req.user.id, 
-      textLength: textToAnalyze.length 
+      textLength: normalizedText.length 
     });
     
-    const graphData = await generateKnowledgeGraph(textToAnalyze);
+    let graphData = null;
+
+    const buildMinimalGraph = () => ({
+      nodes: [
+        {
+          id: noteId ? String(noteId) : 'root',
+          label: noteDoc?.title || normalizedText.slice(0, 32) || 'Note'
+        }
+      ],
+      edges: []
+    });
+
+    // If text missing or too short, fall back to a minimal graph instead of erroring
+    if (!normalizedText || tooShort) {
+      logger.warn('Text missing or too short for LLM graph, returning minimal graph', {
+        userId: req.user.id,
+        length: normalizedText.length
+      });
+      graphData = buildMinimalGraph();
+    } else {
+      graphData = await generateKnowledgeGraph(normalizedText);
+    }
 
     // Validate graph data
     if (!graphData || !graphData.nodes || !graphData.edges) {
@@ -75,10 +100,26 @@ exports.visualizeNote = async (req, res) => {
       };
     }).filter(Boolean); // Remove null entries
 
+    const uniqueNodes = [];
+    const seenNodeIds = new Set();
+    nodes.forEach((n) => {
+      if (!seenNodeIds.has(n.id)) {
+        seenNodeIds.add(n.id);
+        uniqueNodes.push(n);
+      }
+    });
+
+    const nodeIdSet = new Set(uniqueNodes.map((n) => n.id));
+
     // Validate edges
     const edges = graphData.edges.map((edge, index) => {
       if (!edge.source || !edge.target) {
         logger.warn('Edge missing source or target', { edge });
+        return null;
+      }
+
+      if (!nodeIdSet.has(String(edge.source)) || !nodeIdSet.has(String(edge.target))) {
+        logger.warn('Edge references missing node', { edge });
         return null;
       }
 
@@ -90,29 +131,42 @@ exports.visualizeNote = async (req, res) => {
       };
     }).filter(Boolean); // Remove null entries
 
+    const safeNodes = uniqueNodes.length > 0 ? uniqueNodes : [{ id: noteId ? String(noteId) : 'root', label: noteDoc?.title || 'Note' }];
+    const safeEdges = safeNodes.length > 1 ? edges : [];
+
     logger.success('Knowledge graph generated', { 
       userId: req.user.id,
-      nodes: nodes.length, 
-      edges: edges.length 
+      nodes: safeNodes.length, 
+      edges: safeEdges.length 
     });
 
-    res.json({ nodes, edges });
+    res.json({ nodes: safeNodes, edges: safeEdges });
   } catch (error) {
     logger.error('Visualization failed', error, { userId: req.user?.id });
     
+    const isQuota = error?.code === 'AI_QUOTA' || error?.status === 429;
+    const status = isQuota ? 429 : 500;
+
     // Provide more specific error messages
-    let errorMessage = 'Failed to generate visualization';
+    let errorMessage = isQuota
+      ? 'AI quota exceeded. Please retry in a minute.'
+      : 'Failed to generate visualization';
     
-    if (error.message && error.message.includes('JSON')) {
+    if (!isQuota && error.message && error.message.includes('JSON')) {
       errorMessage = 'AI returned invalid data format';
-    } else if (error.message && error.message.includes('API')) {
+    } else if (!isQuota && error.message && error.message.includes('API')) {
       errorMessage = 'AI service temporarily unavailable';
-    } else if (error.message) {
+    } else if (!isQuota && error.message) {
       errorMessage = error.message;
     }
 
-    res.status(500).json({ 
-      msg: errorMessage,
+    const payload = { msg: errorMessage };
+    if (isQuota && error.retryAfterSeconds) {
+      payload.retryAfterSeconds = error.retryAfterSeconds;
+    }
+
+    res.status(status).json({ 
+      ...payload,
       ...(process.env.NODE_ENV !== 'production' && { error: error.message })
     });
   }

@@ -121,24 +121,22 @@ const server = app.listen(PORT, () => {
 });
 
 // Graceful shutdown
-const gracefulShutdown = (signal) => {
+const gracefulShutdown = async (signal) => {
     console.log(`\n${signal} received. Starting graceful shutdown...`);
-    
-    server.close(() => {
-        console.log('HTTP server closed');
-        
-        // Close database connection
-        require('mongoose').connection.close(false, () => {
-            console.log('MongoDB connection closed');
-            process.exit(0);
-        });
-    });
-    
-    // Force shutdown after 10 seconds
-    setTimeout(() => {
-        console.error('Forced shutdown after timeout');
-        process.exit(1);
-    }, 10000);
+
+    // Stop accepting new connections
+    await new Promise((resolve) => server.close(resolve));
+    console.log('HTTP server closed');
+
+    // Close database connection (mongoose v9+ no callback)
+    try {
+        await require('mongoose').connection.close(false);
+        console.log('MongoDB connection closed');
+    } catch (err) {
+        console.error('Error closing MongoDB connection', err);
+    }
+
+    process.exit(0);
 };
 
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));

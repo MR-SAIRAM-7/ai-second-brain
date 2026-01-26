@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import ReactFlow, {
     Background,
     Controls,
@@ -54,6 +54,10 @@ const MindMap = ({ noteId, text }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    // Stable references to satisfy React Flow node/edge type identity check
+    const nodeTypes = useMemo(() => ({}), []);
+    const edgeTypes = useMemo(() => ({}), []);
+
     const fetchData = useCallback(async () => {
         if (!noteId && !text) return;
 
@@ -61,7 +65,7 @@ const MindMap = ({ noteId, text }) => {
         setError(null);
         try {
             const res = await api.post('/visualize', { noteId, text });
-            const { nodes: rawNodes, edges: rawEdges } = res.data;
+            const { nodes: rawNodes = [], edges: rawEdges = [] } = res.data || {};
 
             // Transform for React Flow
             const flowNodes = rawNodes.map((n) => ({
@@ -71,7 +75,9 @@ const MindMap = ({ noteId, text }) => {
                 type: 'default', // or 'input'/'output' if detectable
             }));
 
-            const flowEdges = rawEdges.map((e, i) => ({
+            const flowEdges = rawEdges
+                .filter((e) => e?.source && e?.target)
+                .map((e, i) => ({
                 id: `e${i}`,
                 source: e.source,
                 target: e.target,
@@ -94,7 +100,8 @@ const MindMap = ({ noteId, text }) => {
 
         } catch (err) {
             console.error("Failed to load graph:", err);
-            setError("Failed to generate mind map.");
+            const serverMessage = err?.response?.data?.msg;
+            setError(serverMessage || "Failed to generate mind map.");
         } finally {
             setLoading(false);
         }
@@ -137,6 +144,8 @@ const MindMap = ({ noteId, text }) => {
                 edges={edges}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
+                nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
                 fitView
                 attributionPosition="bottom-right"
             >

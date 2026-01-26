@@ -77,6 +77,27 @@ const embedQuery = async (query) => {
 /**
  * Generates an answer using the LLM.
  */
+const parseRetryAfterSeconds = (errorDetails) => {
+    if (!errorDetails) return null;
+    const raw = JSON.stringify(errorDetails);
+    const match = raw.match(/retryDelay\":\"(\d+)(?:\.(\d+))?s/i);
+    if (!match) return null;
+    const seconds = parseInt(match[1], 10);
+    return Number.isFinite(seconds) ? seconds : null;
+};
+
+const wrapAIError = (error) => {
+    const isQuota = error?.status === 429 || /quota|too many requests/i.test(error?.message || '');
+    if (!isQuota) return error;
+
+    const retryAfterSeconds = parseRetryAfterSeconds(error?.errorDetails);
+    const err = new Error('AI quota exceeded. Please retry later.');
+    err.code = 'AI_QUOTA';
+    err.status = 429;
+    err.retryAfterSeconds = retryAfterSeconds;
+    return err;
+};
+
 const generateAnswer = async (query, context) => {
     try {
         const messages = [
@@ -89,13 +110,21 @@ const generateAnswer = async (query, context) => {
         return response.content;
     } catch (error) {
         console.error("Error generating answer:", error);
-        throw error;
+        throw wrapAIError(error);
     }
 };
 
 /**
  * Generates a knowledge graph from text.
  */
+const stripCodeFences = (raw) => {
+    if (typeof raw !== 'string') return '';
+    return raw
+        .replace(/```json\s*/gi, '')
+        .replace(/```/g, '')
+        .trim();
+};
+
 const generateKnowledgeGraph = async (text) => {
     try {
         // Create a specific model instance for JSON mode
@@ -128,9 +157,10 @@ const generateKnowledgeGraph = async (text) => {
 
         const response = await jsonModel.invoke(messages);
 
-        // Parse the JSON content
+        // Parse the JSON content with light sanitization for stray code fences
         try {
-            return JSON.parse(response.content);
+            const cleaned = stripCodeFences(response.content);
+            return JSON.parse(cleaned);
         } catch (e) {
             console.error("Failed to parse JSON from AI response:", response.content);
             throw new Error("Invalid JSON format from AI");
@@ -138,7 +168,7 @@ const generateKnowledgeGraph = async (text) => {
 
     } catch (error) {
         console.error("Error generating knowledge graph:", error);
-        throw error;
+        throw wrapAIError(error);
     }
 };
 
