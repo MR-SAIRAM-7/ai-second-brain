@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import api from '../api/axios'; // Use centralized api
 
-const useNoteStore = create((set, get) => ({
+const useNoteStore = create((set) => ({
     notes: [],
     selectedNote: null,
     loading: false,
