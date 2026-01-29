@@ -1,5 +1,4 @@
-const pdfParseLib = require('pdf-parse');
-const pdfParse = pdfParseLib.default || pdfParseLib;
+const { PDFParse } = require('pdf-parse');
 const Note = require('../models/Note');
 const Chunk = require('../models/Chunk');
 const { generateEmbeddings } = require('../utils/aiService');
@@ -29,8 +28,6 @@ const reindexNoteInternal = async (noteId, userId) => {
     if (note.userId.toString() !== userId) throw new Error('Not authorized');
 
     const contentText = extractPlainText(note.content);
-    // Note: In manual re-indexing, we might not have 'additionalText' from body easily available unless passed.
-    // For automatic background re-indexing, we assume we just index title + content.
     const textToEmbed = normalizeWhitespace(
         [note.title, contentText].filter(Boolean).join('\n\n')
     );
@@ -57,23 +54,6 @@ const reindexNoteInternal = async (noteId, userId) => {
 
 exports.ingestNote = async (req, res) => {
     try {
-        // For the explicit ingest endpoint, we might want to include 'text' from body if valid
-        // But for consistency, let's just stick to what reindexNoteInternal does, 
-        // OR we can handle the specific logic here if the body has extra text?
-        // The original code handled req.body.text. Let's support it if we want to separate logic,
-        // but to keep it DRY, we might lose that if we strictly use reindexNoteInternal.
-        // However, standard re-indexing usually just looks at the note content. 
-        // If req.body.text was used to append context during ingest, we might lose that.
-        // Let's assume re-indexing from DB is the primary source of truth.
-        // If we really need req.body.text, we can pass it to the internal function.
-
-        // Let's call the internal function for now. If req.body.text is crucial for *manual* ingest, 
-        // we might need to update the note content first? Unlikely.
-        // The original logic: const additionalText = typeof req.body?.text === 'string' ? req.body.text : '';
-
-        // Let's keep the original logic for the route to be safe, but use the inner helpers?
-        // Or better: update reindexNoteInternal to take optional text.
-
         const note = await Note.findById(req.params.id);
         if (!note) return res.status(404).json({ msg: 'Note not found' });
         if (note.userId.toString() !== req.user.id) return res.status(403).json({ msg: 'Not authorized' });
@@ -111,15 +91,18 @@ exports.uploadPdf = async (req, res) => {
         }
         console.log(`[Upload] Received file: ${req.file.originalname}, size: ${req.file.size}`);
 
-        let parsed;
+        let rawText = '';
         try {
-            parsed = await pdfParse(req.file.buffer);
+            const parser = new PDFParse({ data: req.file.buffer });
+            const result = await parser.getText();
+            rawText = normalizeWhitespace(result.text || '');
+            // Clean up if necessary, though memory storage usually handles it.
+            // parser.destroy(); // Unclear if strictly needed for simple text, but good practice if available.
         } catch (e) {
             console.error('[Upload] PDF Parse failed:', e);
             return res.status(400).json({ msg: 'Failed to parse PDF content', error: e.message });
         }
 
-        const rawText = normalizeWhitespace(parsed?.text || '');
         console.log(`[Upload] Extract text length: ${rawText.length}`);
 
         if (!rawText) {

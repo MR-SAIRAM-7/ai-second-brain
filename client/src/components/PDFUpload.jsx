@@ -37,11 +37,7 @@ export default function PDFUpload({ onClose }) {
         formData.append("file", file);
 
         try {
-            await api.post("/upload", formData, {
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                },
-            });
+            await api.post("/upload", formData);
 
             // Refresh notes to show the new one
             await fetchNotes();
