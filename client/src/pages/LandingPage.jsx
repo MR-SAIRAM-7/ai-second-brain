@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion as Motion } from 'framer-motion';
 import { ArrowRight, Brain, Zap, Shield, Globe } from 'lucide-react';
 import dashboardMockup from '../assets/dashboard_mockup.png';
 
@@ -40,7 +40,7 @@ const LandingPage = () => {
                 </div>
 
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-                    <motion.div
+                    <Motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8 }}
@@ -67,9 +67,9 @@ const LandingPage = () => {
                                 Learn More
                             </a>
                         </div>
-                    </motion.div>
+                    </Motion.div>
 
-                    <motion.div
+                    <Motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 0.4, duration: 0.8 }}
@@ -80,7 +80,7 @@ const LandingPage = () => {
                             alt="Dashboard Preview"
                             className="w-full h-auto opacity-80 hover:opacity-100 transition-opacity duration-500"
                         />
-                    </motion.div>
+                    </Motion.div>
                 </div>
             </section>
 
@@ -133,7 +133,7 @@ const LandingPage = () => {
 };
 
 const FeatureCard = ({ icon, title, description }) => (
-    <motion.div
+    <Motion.div
         whileHover={{ y: -5 }}
         className="p-8 rounded-2xl bg-gray-800 border border-gray-700 hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/10 transition-all"
     >
@@ -144,7 +144,7 @@ const FeatureCard = ({ icon, title, description }) => (
         <p className="text-gray-400 leading-relaxed">
             {description}
         </p>
-    </motion.div>
+    </Motion.div>
 );
 
 export default LandingPage;

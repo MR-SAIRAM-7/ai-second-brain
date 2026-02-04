@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion as Motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { Brain, User, Mail, Lock, ArrowRight } from 'lucide-react';
 import api from '../api/axios';
@@ -41,7 +41,7 @@ const Signup = () => {
                 <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-pink-600/20 blur-[120px]" />
             </div>
 
-            <motion.div
+            <Motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-gray-800/50 backdrop-blur-xl p-8 rounded-2xl shadow-2xl w-full max-w-md border border-gray-700 relative z-10"
@@ -121,7 +121,7 @@ const Signup = () => {
                         </Link>
                     </p>
                 </div>
-            </motion.div>
+            </Motion.div>
         </div>
     );
 };
